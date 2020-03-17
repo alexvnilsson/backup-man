@@ -1,2 +1,3 @@
 class Package:
-  Name = "backupman"
+    Name = "backupman"
+    RulesExt = "prof"

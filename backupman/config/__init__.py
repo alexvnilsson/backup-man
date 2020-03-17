@@ -1,37 +1,19 @@
-import sys, os
+import sys
+import os
 from configparser import ConfigParser
 from pathlib import Path
 
-from backupman.config.paths import ConfigPaths
-from backupman.config.smbconfig import SmbConfig, SmbConfigLocal, SmbConfigWindows
+from backupman.config import smbconfig
 
-def read_config() -> dict:
-  if ConfigPaths.has_userconfig():
-    print("Has home")
-  smbrc = configpaths.SmbRc
 
-  if not smbrc.exists():
-    etc_path = str(configpaths.Etc)
-    raise IOError(f".smbrc finns inte i katalogen {etc_path}.")
+def load_smbconfig():
+    smb_config = None
 
-  confparser = ConfigParser()
-  confparser.read(str(smbrc.resolve()))
+    try:
+        smb_config = smbconfig.load_config()
+    except IOError as e:
+        print(f"Kunde inte läsa SMB-konfig: {e}")
+    except Exception:
+        print("Något gick snett.")
 
-  local = confparser["Local"]
-  Local: SmbConfigLocal = {
-    "MountPath": local.get("MountPath")
-  }
-
-  windows = confparser["Windows"]
-  Windows: SmbConfigWindows = {
-    "Username": windows.get("Username"),
-    "Password": windows.get("Password"),
-    "Share": windows.get("Share")
-  }
-
-  Config: SmbConfig = {
-    "Local": Local,
-    "Windows": Windows
-  }
-
-  return Config
+    return smb_config

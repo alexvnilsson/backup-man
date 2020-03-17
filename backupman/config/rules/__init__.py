@@ -3,76 +3,101 @@ import glob
 import json
 from pathlib import Path
 import os.path
-from conf import configpaths
+
+from backupman.config.pkg import Package
+from backupman.config import paths
+from backupman.config.paths import ConfigPaths
+from backupman.config.rules.rule import Rule
 
 CONF_FIELDS = [
-  'name',
-  'include'
+    'name',
+    'include'
 ]
 
 CONF_FIELDS_INPUT_PROMPT = [
-  'include'
+    'include'
 ]
 
-def __get_path(profile_name: str) -> str:
-  return str(configpaths.Profiles.joinpath(Path(profile_name).with_suffix(".prof")))
 
-def list_profiles() -> List[str]:
-  profiles: List[str] = []
-  profiles_path = configpaths.Profiles
+def __get_path(rule_name: str = None) -> Path:
+    rules_dir = paths.get_rulespath()
+    rules_ext = Package.RulesExt
 
-  profs = glob.glob(str(profiles_path.joinpath("*.prof")))
+    if rule_name is not None:
+        rules_path = rules_dir.joinpath(Path(rule_name).with_suffix(f".{rules_ext}"))
+        return rules_path
+    else:
+        return rules_dir
 
-  for p in profs:
-    pp = Path(p)
-    profiles.append(pp.stem)
 
-  return profiles
+def list() -> List[str]:
+    r: List[str] = []
 
-def is_created(profile_name: str) -> bool:
-  profile_path = __get_path(profile_name)
+    profs = glob.glob(str(__get_path().joinpath("*.prof")))
 
-  return os.path.exists(str(profile_path))
+    for p in profs:
+        pp = Path(p)
+        r.append(pp.stem)
 
-def read_profile(profile_name: str):
-  profile_path = __get_path(profile_name)
-  profile_data = None
-  
-  with open(profile_path, 'r') as pf:
-    profile_data = json.load(pf)
+    return r
 
-  if profile_data is None:
-    return None
 
-  return profile_data
+def is_created(rule_name: str) -> bool:
+    rules_path = __get_path(rule_name)
 
-def write_profile(profile_name: str, profile_include: List[str]):
-  profile_path = __get_path(profile_name)
+    return os.path.exists(str(rules_path))
 
-  profile_data = {
-    'name': profile_name,
-    'include': profile_include
-  }
 
-  with open (profile_path, 'w') as pf:
-    json.dump(profile_data, pf)
-    pf.close()
+def read(rule_name: str):
+    rules_path = __get_path(rule_name)
 
-def update_profile(profile_name: str, field: str, value: Any):
-  profile_path = __get_path(profile_name)
+    with open(rules_path, 'r') as pf:
+        rule_data = json.load(pf)
 
-  with open(profile_path, 'r+') as pf:
-    profile_data = json.load(pf)
+    return rule_data
 
-    if profile_data is None:
-      raise Exception(f"Kunde inte läsa innehållet av profilen '{profile_name}'!'")
 
-    tmp = profile_data[field]
-    profile_data[field] = value
+def remove(rule_name: str):
+    if not is_created(rule_name):
+        print(f"Kunde inte ta bort regeln {rule_name}: regeln finns inte")
+        exit(1)
 
-    pf.seek(0)
-    json.dump(profile_data, pf)
-    pf.truncate()
+    try:
+        os.remove(__get_path(rule_name))
+    except Exception as e:
+        print(f"Kunde inte ta bort regeln {rule_name}: {e}")
+        exit(1)
 
-def get_files(profile: dict):
-  print(profile['include'])
+def write(rule_name: str, rule_include: List[str]):
+    rules_path = __get_path(rule_name)
+
+    rule_data = {
+        'name': rule_name,
+        'include': rule_include
+    }
+
+    with open(rules_path, 'w') as pf:
+        json.dump(rule_data, pf)
+        pf.close()
+
+
+def update(rule_name: str, field: str, value: Any):
+    rules_path = __get_path(rule_name)
+
+    with open(rules_path, 'r+') as pf:
+        rule_data = json.load(pf)
+
+        if rule_data is None:
+            raise Exception(
+                f"Kunde inte läsa innehållet av regeln '{rule_name}'!'")
+
+        tmp = rule_data[field]
+        rule_data[field] = value
+
+        pf.seek(0)
+        json.dump(rule_data, pf)
+        pf.truncate()
+
+
+def get_files(r: dict):
+    print(r['include'])
